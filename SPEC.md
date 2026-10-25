@@ -1,6 +1,6 @@
 # SPEC.md — Radar de oportunidades inmobiliarias con descuento
 
-**Versión 1.0 · 25/10/2026 · Responsable: Jesús**
+**Versión 1.1 · 25/10/2026 · Responsable: Jesús** (cambios de la Fase 0 aprobada: ver `docs/FASE0.md` y §17)
 Nombre y marca provisionales: se definen en la fase de diseño.
 
 ---
@@ -95,10 +95,12 @@ G. Telegram: aviso a Jesús + aprobación
 - **Claude con navegador (C):** para webs que el código no puede leer de forma permitida o estable, y para revisar a fondo las fichas de las mejores candidatas. Solo funciona con la app de escritorio de Claude abierta y el ordenador encendido. Consume bastante uso por ejecución, así que se reserva para pocas tareas de alto valor.
 - **Buzón de intercambio entre C y B:** una carpeta compartida (p. ej. Google Drive) donde Claude con navegador deja ficheros JSON con el esquema de §5, y la ingesta los importa. Claude Code puede proponer una alternativa más simple.
 
-### Hosting
-- **Recomendación:** un VPS pequeño (unos 5 €/mes), con cron para las ejecuciones y el bot de Telegram siempre activo. Los botones de Telegram necesitan un proceso escuchando.
-- **Alternativa:** GitHub Actions para la ejecución semanal y una función serverless para el webhook del bot. En ese caso la base de datos tiene que persistir entre ejecuciones.
-- Claude Code compara ambas opciones en la Fase 0, con el coste estimado de cada una.
+### Hosting (decidido en la Fase 0: 0 €/mes)
+- **GitHub Actions** para las ejecuciones semanal y diaria y para procesar las pulsaciones del bot.
+- **Cloudflare Worker** (plan gratuito) recibe el webhook de Telegram, comprueba el chat autorizado y lanza la tarea en GitHub Actions. El bot responde en unos 30–90 s y confirma al instante con "⏳ Procesando…".
+- **Base de datos:** SQLite guardado en la rama `datos` del repositorio privado tras cada ejecución. Las tareas se ejecutan en fila, nunca dos a la vez.
+- **Evidencias** (HTML y PDF originales): paquete semanal comprimido adjunto como Release de GitHub.
+- Alternativas si hiciera falta: VPS gratuito (Google Cloud e2-micro) o VPS de pago (~4–6 €/mes).
 
 ---
 
@@ -106,8 +108,8 @@ G. Telegram: aviso a Jesús + aprobación
 
 | # | Fuente | Qué aporta | Método | Fase |
 |---|---|---|---|---|
-| 1 | API de datos abiertos del BOE (sumario diario, sección IV "Administración de Justicia") | Descubre anuncios nuevos de subasta con su identificador SUB-XX-AAAA-NNNNNN y su enlace | API oficial | F1 |
-| 2 | Portal de Subastas del BOE (subastas.boe.es) | Ficha completa: valor, tasación, puja mínima, depósito, bienes, cargas, autoridad gestora, administrador concursal, estado y pujas | Búsqueda avanzada por tipo y provincia + ficha HTML | F1 |
+| 1 | API de datos abiertos del BOE (sumario diario, sección IV "Administración de Justicia") | **Fuente principal de descubrimiento.** Anuncios nuevos de subasta: identificador SUB-XX-AAAA-NNNNNN, tipo, juzgado y localidad (→ provincia por partido judicial) | API oficial | F1 |
+| 2 | Portal de Subastas del BOE (subastas.boe.es) | Ficha completa: valor, tasación, puja mínima, depósito, bienes, cargas, autoridad gestora, administrador concursal, estado y pujas | **Su robots.txt prohíbe todo acceso automático (`Disallow: /`).** Revisión asistida con Claude in Chrome (solo lectura) sobre la lista que genera la fuente 1. Se solicita autorización escrita al BOE; si se concede, pasa a conector de código. | F1–F2 |
 | 3 | Registro Público Concursal (publicidadconcursal.es) | Alerta temprana: empresas de las 4 provincias en fase de liquidación | HTML | F6 |
 | 4 | ActCon (subastas y ventas concursales) | Activos concursales | HTML | F6 |
 | 5 | Escrapalia / Surus Inmuebles | Activos concursales y de empresas | HTML | F6 |
@@ -115,7 +117,10 @@ G. Telegram: aviso a Jesús + aprobación
 | 7 | eactivos, IAG, Valoralia, Baratura | Liquidaciones | HTML | F6+ |
 | 8 | Servicers y bancos (Altamira, Solvia, Haya, Servihabitat, Aliseda) | Ocupados, sin posesión, descuentos | HTML | F7 |
 | 9 | Portales (Idealista, Fotocasa) | Ocupados, nuda propiedad, cesiones de remate | Solo con la API oficial si se consigue acceso, o por revisión asistida. **No hacer scraping contra sus condiciones de uso.** | F7 |
-| 10 | Datos de mercado: Portal Estadístico del Notariado (€/m² escriturado por municipio o CP), estadística registral, precios de oferta solo como contraste | Comparables y valor de mercado | API, HTML o descarga | F3 |
+| 10 | Datos de mercado: Portal Estadístico del Notariado (€/m² escriturado por municipio o CP), estadística registral, precios de oferta solo como contraste | Valor de mercado por zona | API, HTML o descarga | F3 |
+| 11 | Catastro (servicios web oficiales) | Superficie, año y uso a partir de la referencia catastral; ayuda a deduplicar | API oficial | F1–F2 |
+| 12 | Precio de alquiler de referencia (fuente pública por determinar; la web del Ministerio de Vivienda rechaza el acceso desde el entorno de desarrollo) | Renta estimada para §7.3 | A definir | F3 |
+| 13 | Costes de reforma: BCCA (Junta de Andalucía), generador de precios de CYPE, informes públicos | €/m² de reforma por ciudad y zona | HTML o descarga | F3 |
 
 ### Reglas de acceso (obligatorias)
 - Orden de preferencia: API o datos abiertos, luego HTML público y, por último, navegador asistido.
@@ -129,9 +134,10 @@ G. Telegram: aviso a Jesús + aprobación
 ## 5. Modelo de datos (mínimo)
 
 - **activo:** id interno, tipo, provincia, municipio, dirección, CP, referencia catastral, finca registral y registro, superficies (catastro, nota simple, útil o construida), año, estado de conservación estimado, coordenadas, fotos.
-- **evento_venta:** id, activo_id, fuente, identificador externo (SUB-…), tipo (JC/JA/JV/AT/notarial/venta directa/servicer…), autoridad (juzgado, AEAT…), administrador concursal (nombre y contacto profesional), valor de subasta, tasación, puja mínima, depósito, comisión de la plataforma, fechas de inicio y fin, estado, puja actual o máxima, URL, fecha de detección y última comprobación.
+- **evento_venta** (uno por lote; un lote puede incluir varios activos mediante la tabla `evento_activo`): id, fuente, nº de lote, participación (%), identificador externo (SUB-…), tipo (JC/JA/JV/AT/notarial/venta directa/servicer…), autoridad (juzgado, AEAT…), administrador concursal (nombre y contacto profesional), valor de subasta, tasación, puja mínima, depósito, comisión de la plataforma, fechas de inicio y fin, estado, puja actual o máxima, URL, fecha de detección y última comprobación.
 - **situacion_juridica:** cargas anteriores y posteriores, cuáles se cancelan, ocupación (libre / ocupado / desconocido), posesión, deuda conocida de comunidad e IBI, posibilidad de visita. **Cada campo lleva `fuente` y `confianza`** (verificado / extraído / estimado / desconocido) y, si viene de un texto, la cita literal.
-- **comparable:** fuente, fecha, €/m², superficie, distancia, tipo (escriturado / oferta).
+- **referencia_mercado:** fuente, ámbito (municipio / CP / barrio), tipología, tipo (escriturado / oferta / alquiler), periodo, €/m², nº de operaciones, fecha.
+- **coste_reforma:** ciudad, zona, nivel, €/m², fuente, fecha.
 - **valoracion:** versión de parámetros, escenarios, precio máximo de oferta, márgenes, TIR, score y semáforos.
 - **oportunidad:** estado actual e historial de estados (§10).
 - **envio:** qué se envió, a quién, cuándo y en qué versión (teaser o completo).
@@ -164,10 +170,10 @@ costes:
                                       # para sociedades que revenden: verificar con asesor
   iva_si_vendedor_empresa: verificar  # marcar "fiscalidad pendiente de verificar"
   notaria_registro: 0.015
-  comision_plataforma: leer_de_condiciones   # si no consta → "pendiente"
-  comision_venta: 0.03
+  comision_plataforma: leer_de_condiciones   # 0 en el Portal del BOE; si no consta → "pendiente"
+  comision_venta: 0.0363              # 3 % + IVA
   plusvalia_municipal_venta: 0.005    # estimación, varía por municipio
-  reforma_eur_m2: {ligera: 300, media: 550, integral: 850}   # ajustar con presupuestos reales
+  reforma_eur_m2: {ligera: 300, media: 550, integral: 850}   # PROVISIONAL: en F3 se sustituye por tabla por ciudad y zona (fuente 13)
   imprevistos_reforma: 0.15
   deuda_comunidad: "año en curso + 3 anteriores (si se conoce)"
   desocupacion: {coste: 6000, meses: 12}     # supuesto, ajustar
@@ -185,8 +191,8 @@ ejecucion:
   chequeo_diario_cierres_y_estados: true
 
 api_claude:
-  modelo: configurable
-  presupuesto_mensual_eur: 30         # a confirmar
+  presupuesto_mensual_eur: 0          # decidido en F0: sin API de pago
+  redaccion: plantillas               # opcional: suscripción de Claude (plan Pro) desde GitHub Actions
 
 telegram:
   chats_autorizados: [jesus]
@@ -197,10 +203,12 @@ telegram:
 ## 7. Motor de valoración (código determinista; nunca lo calcula el LLM)
 
 ### 7.1 Valor de mercado: tres escenarios
-- **Conservador:** percentil 25 de los comparables escriturados, o la mediana escriturada −5 %.
-- **Base:** mediana escriturada, o precio de oferta menos `descuento_oferta_a_cierre`.
-- **Optimista:** percentil 75, solo después de reformar.
-- Mínimo 5 comparables. Si hay menos, la valoración se marca como de **baja confianza**.
+El Notariado publica medias por zona, no operaciones sueltas, por lo que no se usan percentiles.
+- **Base:** €/m² escriturado de la zona más pequeña disponible (CP antes que municipio) y la tipología más parecida, últimos 12 meses.
+- **Conservador:** base −10 % (configurable).
+- **Optimista:** base +10 %, solo después de reformar (configurable).
+- **Contraste:** precio de oferta de la zona menos `descuento_oferta_a_cierre`.
+- **Baja confianza** si: solo hay dato de municipio, el dato tiene más de 12 meses, hay menos de 10 operaciones, o escriturado y oferta difieren más de un 25 %.
 - Se distingue el valor en el estado actual del valor después de la reforma.
 
 ### 7.2 Precio máximo de oferta (comprar, reformar y vender)
@@ -208,7 +216,7 @@ telegram:
 Definiciones:
 - `V_neto = V_conservador × (1 − comision_venta − plusvalia_municipal_venta)`
 - `t = itp + notaria_registro + comision_plataforma`
-- `f = coste_financiero_anual × (meses_hasta_posesion + meses_reforma_y_venta) / 12`
+- `f = coste_financiero_anual × (meses_hasta_posesion + meses_desocupacion + meses_reforma_y_venta) / 12` (meses_desocupacion = 0 si está libre)
 - `R = reforma = m² × €/m² según estado × (1 + imprevistos)`
 - `D = deudas que no se cancelan (comunidad, IBI)`
 - `O = coste de desocupación (si está ocupado)`
@@ -223,6 +231,9 @@ Condición: `(V_neto − I) / I ≥ m`
 
 ### 7.3 Alquiler
 - Rentabilidad bruta = renta anual estimada / I.
+
+### 7.3 bis Riesgo fiscal del ITP
+- En Andalucía el ITP puede liquidarse sobre el valor de referencia catastral si es mayor que el precio pagado. Hasta que lo confirme un asesor, se muestra como riesgo ámbar y la fiscalidad se marca "pendiente de verificar".
 - Rentabilidad neta = (renta − IBI − comunidad − seguro − mantenimiento − vacío) / I.
 
 ### 7.4 TIR y plazo
@@ -253,7 +264,9 @@ Condición: `(V_neto − I) / I ≥ m`
 
 ---
 
-## 9. Uso de Claude (API): qué hace y qué no
+## 9. Uso de Claude: qué hace y qué no
+
+**Decisión de la Fase 0:** 0 € de API. Lo estructurado se lee con código; el texto libre de cargas y ocupación se clasifica con reglas de palabras clave (con confianza y cita literal); lo dudoso queda "pendiente de verificar" o va a revisión asistida. Los textos de los informes salen de plantillas. Opcionalmente, en la F2 se prueba usar la suscripción de Claude (plan Pro) desde GitHub Actions.
 
 **Hace:**
 - Extraer a JSON los datos de edictos, fichas y PDFs de condiciones, con un esquema validado con Pydantic.
@@ -390,7 +403,7 @@ Al terminar cada fase, Claude Code enseña un resultado real y comprueba los cri
 
 ---
 
-## 16. Decisiones abiertas (preguntar antes de la F0)
+## 16. Decisiones abiertas — resueltas en la Fase 0 (ver §17)
 
 1. Hosting: VPS (unos 5 €/mes) o GitHub Actions con webhook serverless.
 2. Presupuesto mensual máximo para la API de Claude.
@@ -449,3 +462,20 @@ Cada lunes a las 8:00 (hora de Madrid):
 8. Señala aparte las subastas concursales que hayan concluido sin pujas en las últimas
    semanas: son candidatas a venta directa con el administrador concursal.
 ```
+
+---
+
+## 17. Decisiones de la Fase 0 (25/10/2026)
+
+| # | Decisión |
+|---|---|
+| 1 | Hosting 0 €: GitHub Actions + Cloudflare Worker (§3). Bot con respuesta en ~1 minuto: aceptado. |
+| 2 | API de Claude: 0 € (§9). Plan de Claude de Jesús: Pro. |
+| 3 | Compra por sociedad: no se sabe. ITP 7 % y fiscalidad "pendiente de verificar". |
+| 4 | Margen antes de impuestos; comisión de venta 3,63 %; descuento 25 % y alquiler 7 % sin cambios; reforma por ciudad y zona con fuentes reales en F3. |
+| 5 | Telegram: solo Jesús. |
+| 6 | Make.com: se sustituye (no se encontró escenario del BOE en la cuenta revisada). |
+| 7 | Buzón con Claude con navegador: Google Drive. Esta pieza se adelanta a F1–F2 por la restricción del Portal de Subastas (§4, fuente 2). |
+| 8 | Repositorio privado: organizacion3333-design/proyecto-in. |
+| 9 | Email de contacto en el user-agent: jesus20000220@gmail.com. |
+

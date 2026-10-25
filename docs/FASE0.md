@@ -1,7 +1,7 @@
 # Fase 0 — Propuesta de arquitectura
 
 **Proyecto:** Radar de oportunidades inmobiliarias con descuento
-**Fecha:** 25/10/2026 · **Para:** Jesús · **Estado:** pendiente de aprobación
+**Fecha:** 25/10/2026 · **Para:** Jesús · **Estado:** aprobada el 25/10/2026 (plan de Claude: Pro; respuesta del bot en ~1 min aceptada)
 
 > Este documento resume cómo se va a construir el sistema. No hay código todavía.
 > Cuando lo apruebes, aplico los cambios propuestos a SPEC.md y empiezo la Fase 1.
