@@ -1,0 +1,9 @@
+# Entorno local
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# Datos generados (en la F5 la base de datos se guarda en la rama "datos")
+data/

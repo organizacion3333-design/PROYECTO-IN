@@ -1,0 +1,26 @@
+[project]
+name = "radar-inmobiliario"
+version = "0.1.0"
+description = "Radar de oportunidades inmobiliarias con descuento (Córdoba, Sevilla, Málaga y Huelva)"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28",
+    "pydantic>=2.9",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["comun", "fuentes", "db", "tareas"]
+
+[tool.setuptools.package-data]
+db = ["esquema.sql"]

@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: radar-inmobiliario
+Version: 0.1.0
+Summary: Radar de oportunidades inmobiliarias con descuento (Córdoba, Sevilla, Málaga y Huelva)
+Requires-Python: >=3.12
+Requires-Dist: httpx>=0.28
+Requires-Dist: pydantic>=2.9
+Requires-Dist: pyyaml>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"

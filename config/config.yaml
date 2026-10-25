@@ -1,0 +1,64 @@
+# Parámetros del radar. Este es el único archivo que hace falta tocar para
+# cambiar el comportamiento del sistema. Cada cambio queda versionado.
+# Valores acordados en la Fase 0 (SPEC.md §6 y §17).
+
+zonas:
+  # Códigos INE: 14 Córdoba, 41 Sevilla, 29 Málaga, 21 Huelva.
+  # Fase 1: solo Córdoba. En la Fase 6 se añaden las otras tres.
+  provincias_activas: [14]
+  provincias_objetivo: [14, 41, 29, 21]
+  municipios_prioritarios: [Córdoba, Sevilla, Málaga, Huelva]
+
+descubrimiento:
+  # Días de BOE que se revisan hacia atrás en cada ejecución. Una subasta
+  # judicial dura 20 días naturales desde que se abre, así que 45 días
+  # cubren con margen todas las que siguen activas.
+  dias_hacia_atras: 45
+  # Una subasta se considera "activa" en el listado si su anuncio se
+  # publicó en el BOE en los últimos N días.
+  ventana_activa_dias: 30
+
+red:
+  user_agent: "RadarInmobiliario/0.1 (+contacto: jesus20000220@gmail.com)"
+  pausa_segundos: 4          # mínimo entre dos peticiones al mismo dominio
+  timeout_segundos: 30
+  reintentos: 3
+
+filtros:
+  descuento_minimo: 0.25              # sobre valor de mercado conservador
+  margen_neto_minimo_flip: 0.20       # beneficio neto antes de impuestos / inversión total
+  rentabilidad_bruta_min_alquiler: 0.07
+  participacion_minima: 0.50          # excluir cuotas < 50 %
+  dias_minimos_hasta_cierre: 5        # tiempo mínimo para due diligence
+  excluir_sueltos: [garaje, trastero] # salvo que formen parte de un lote
+
+costes:
+  itp: 0.07                           # Andalucía, tipo general. Fiscalidad pendiente de verificar
+  iva_si_vendedor_empresa: verificar
+  notaria_registro: 0.015
+  comision_plataforma: leer_de_condiciones   # 0 en el Portal del BOE
+  comision_venta: 0.0363              # 3 % + IVA
+  plusvalia_municipal_venta: 0.005
+  reforma_eur_m2: {ligera: 300, media: 550, integral: 850}   # PROVISIONAL hasta la F3
+  imprevistos_reforma: 0.15
+  deuda_comunidad: "año en curso + 3 anteriores (si se conoce)"
+  desocupacion: {coste: 6000, meses: 12}
+  coste_financiero_anual: 0.06
+  meses_hasta_posesion: {subasta_judicial: 6, concursal: 4, venta_directa: 3}
+  meses_reforma_y_venta: 6
+  descuento_oferta_a_cierre: 0.10
+
+scoring:
+  pesos: {descuento: 30, margen: 25, riesgo: 20, liquidez: 15, plazo: 10}
+  umbral_dossier: 65
+
+ejecucion:
+  semanal: "lunes 07:00 Europe/Madrid"
+  chequeo_diario_cierres_y_estados: true
+
+api_claude:
+  presupuesto_mensual_eur: 0          # decidido en F0: sin API de pago
+  redaccion: plantillas
+
+telegram:
+  chats_autorizados: [jesus]
