@@ -34,7 +34,7 @@ Nada más.
 
 ## Qué haré con esa lista
 
-Cruzaré cada identificador con el listado del sistema y te diré cuáles aparecen y cuáles faltan. De los que falten, explicaré por qué.
+Cruzaré cada identificador con el listado (`python -m tareas.verificar --fichero lista.txt`) del sistema y te diré cuáles aparecen y cuáles faltan. De los que falten, explicaré por qué.
 
 Ya sé de dos casos en los que el BOE no basta para detectar una subasta:
 - **Juzgado de otra provincia:** por ejemplo, un concurso tramitado en Madrid con un inmueble en Córdoba. El anuncio sale con la localidad del juzgado, no la del inmueble.
