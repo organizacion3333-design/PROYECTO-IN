@@ -7,3 +7,4 @@ __pycache__/
 
 # Datos generados (en la F5 la base de datos se guarda en la rama "datos")
 data/
+*.egg-info/

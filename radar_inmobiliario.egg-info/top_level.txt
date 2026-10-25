@@ -1,4 +1,0 @@
-comun
-db
-fuentes
-tareas
