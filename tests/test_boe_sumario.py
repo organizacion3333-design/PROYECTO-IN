@@ -64,3 +64,13 @@ def test_descubrir_un_dia_real(cfg_red, transporte, tmp_path):
 def test_dia_sin_boe_devuelve_vacio(cfg_red, transporte, tmp_path):
     conector = BoeSumario(ClientePrudente(cfg_red, tmp_path, transporte=transporte), {14})
     assert conector.descubrir(date(2026, 10, 18)) == []   # domingo
+
+
+def test_prefiltro_descarta_lo_que_no_es_inmueble():
+    avionetas = {"seccion": "5B", "departamento": "OTROS ENTES",
+                 "titulo": "Anuncio del Aeropuerto de Córdoba respecto de la subasta pública de cuatro aeronaves"}
+    inmueble = {"seccion": "5B", "departamento": "MINISTERIO DE HACIENDA",
+                "titulo": "Resolución de la Delegación de Economía y Hacienda en Córdoba por la que se convoca "
+                          "subasta pública de bienes inmuebles"}
+    assert clasificar(avionetas, {14}) is None
+    assert clasificar(inmueble, {14}) == (14, "titulo_anuncio", None)

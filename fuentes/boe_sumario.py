@@ -28,6 +28,10 @@ RE_SUB = re.compile(r"SUB-([A-Z]{2})-(\d{4})-([0-9A-Z]+)")
 RE_URL_PORTAL = re.compile(r"https?://subastas\.boe\.es/\S+?(?=\s|$)")
 RE_TEXTO = re.compile(r'<div id="textoxslt">(.*?)</div>', re.S)
 RE_SUBASTA_TITULO = re.compile(r"subasta|enajenaci[oó]n", re.I)
+# Prefiltro barato (SPEC §9): títulos de V-B que claramente no son inmuebles.
+RE_NO_INMUEBLE = re.compile(
+    r"aeronave|veh[ií]culo|\bmuebles\b|material|ganado|equino|buque|embarcaci|chatarra|dep[oó]sitos de acero",
+    re.I)
 RE_AEAT_ANDALUCIA = re.compile(r"SUBASTAS\s+ANDALUC[IÍ]A\s*(\d+)?", re.I)
 
 # Tipo de subasta según el texto del anuncio (por si el SUB-… no aparece).
@@ -83,7 +87,7 @@ def clasificar(item: dict, provincias: set[int]) -> tuple[int | None, str, str |
         if aeat:
             unidad = aeat.group(1)
             return None, "desconocida", f"Andalucía (AEAT U.R. {unidad})" if unidad else "Andalucía (AEAT)"
-        if RE_SUBASTA_TITULO.search(titulo):
+        if RE_SUBASTA_TITULO.search(titulo) and not RE_NO_INMUEBLE.search(titulo):
             prov = provincia_en_texto(titulo)
             if prov in provincias:
                 return prov, "titulo_anuncio", None

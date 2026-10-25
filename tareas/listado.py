@@ -16,6 +16,7 @@ from pathlib import Path
 
 from comun.config import DIR_DATOS, cargar_config
 from comun.territorio import PROVINCIAS
+from comun.texto import clave_lugar
 from db import repositorio
 
 NOMBRES_TIPO = {
@@ -43,11 +44,15 @@ def subastas_activas(conexion: sqlite3.Connection, provincias: list[int], desde:
 
 
 def _fila(s: sqlite3.Row) -> dict:
+    autoridad = s["autoridad"] or ""
+    localidad = s["localidad_autoridad"]
+    if localidad and clave_lugar(localidad) not in clave_lugar(autoridad):
+        autoridad = f"{autoridad} ({localidad.title()})"
     return {
         "id_externo": s["id_externo"],
         "tipo": NOMBRES_TIPO.get(s["tipo"], s["tipo"] or "?"),
         "provincia": PROVINCIAS.get(s["provincia"], s["ambito"] or "por confirmar"),
-        "autoridad": s["autoridad"] or "",
+        "autoridad": autoridad,
         "fecha_publicacion_boe": s["fecha_publicacion_boe"],
         "url_portal": s["url_portal"] or "",
         "boe_id": s["boe_id"] or "",
